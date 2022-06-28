@@ -74,6 +74,8 @@ async function checkZoOpenOrderAccounts(mfiAccount: MarginfiAccount) {
 }
 
 async function trade(mfiAccount: MarginfiAccount) {
+    console.log("----------------------------------------------------");
+    console.log("%s", new Date().toISOString());
   const connection = mfiAccount.client.program.provider.connection;
   const provider = mfiAccount.client.program.provider;
 
@@ -110,7 +112,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   const zoFundingInfo = await zoState.getFundingInfo(ZO_MARKET);
 
   if (!zoFundingInfo.data) {
-    console.log("Can't get Zo funding info");
+    console.log("Can't get 01 funding info");
     return;
   }
 
@@ -125,12 +127,13 @@ async function trade(mfiAccount: MarginfiAccount) {
   const delta = mangoFundingRate.sub(zoFundingRate).abs();
 
   console.log(
-    "Mango: %s%, Zo: %s%, Mango dominant: %s, delta: %s% ($%s/h)",
+      "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APY %s%)",
     mangoFundingRate.mul(new Decimal(100)).toPrecision(4),
     zoFundingRate.mul(new Decimal(100)).toPrecision(4),
     mangoDominant,
     delta.mul(new Decimal(100)).toPrecision(4),
-    delta.mul(new Decimal(POSITION_SIZE_USD)).toDecimalPlaces(6)
+    delta.mul(new Decimal(POSITION_SIZE_USD)).toDecimalPlaces(6),
+    delta.add(new Decimal(1)).pow(new Decimal(8760)).sub(new Decimal(1)).mul(new Decimal(100)).toDecimalPlaces(3)
   );
 
   let mangoDirection: Side;
@@ -164,8 +167,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   const zoPositionSize = new Decimal(POSITION_SIZE_USD).div(zoPrice);
 
   console.log(
-    "%s position structure:\n\tMango: %s @ %s\n\tZo: %s @ %s",
-    ZO_MARKET,
+    "Position: Mango: %s @ %s 01: %s @ %s",
     (mangoDirection == Side.Bid
       ? mangoPositionSize
       : mangoPositionSize.neg()
@@ -188,7 +190,7 @@ async function trade(mfiAccount: MarginfiAccount) {
     : currentZoPositionInfo.coins.decimal.neg();
 
   console.log(
-    "Current positions on %s: Mango: %s, Zo: %s",
+    "Current positions on %s: Mango: %s, 01: %s",
     ZO_MARKET,
     currentMangoPosition,
     currentZoPosition
@@ -202,7 +204,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   );
 
   console.log(
-    "Delta Mango: %s, Zo: %s",
+    "Delta Mango: %s, 01: %s",
     mangoDelta.toDecimalPlaces(4),
     zoDelta.toDecimalPlaces(4)
   );
@@ -232,7 +234,7 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   if (zoDelta.abs().gt(new Decimal(DUST_THRESHOLD))) {
     console.log(
-      "Opening %s %s ($%s) %s on Zo @ %s",
+      "Opening %s %s ($%s) %s on 01 @ %s",
       zoDirection ? "LONG" : "SHORT",
       zoDelta.toDecimalPlaces(4),
       zoDelta.mul(zoPrice).toDecimalPlaces(4),
