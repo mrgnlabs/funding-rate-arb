@@ -24,8 +24,17 @@ const POSITION_SIZE_USD = 10;
 // INTERVAL defines the interval the bot observes and takes action at.
 const INTERVAL = 30 * 1000;
 
+const DRY_RUN = process.env.DRY_RUN === "true";
+
+const MANGO_MARKET = "SOL";
+const ZO_MARKET = `${MANGO_MARKET}-PERP`;
+
 async function main() {
   // Construct the marginfi client from .env file.
+  console.log("Starting arb bot for %s", ZO_MARKET);
+  if (DRY_RUN) {
+    console.log("DRY RUN Enabled");
+  }
   const mfiClient = await getClientFromEnv();
   // Get marginfi account from .env config.
   const mfiAccount = await mfiClient.getMarginfiAccount(
@@ -58,9 +67,9 @@ async function main() {
 async function checkZoOpenOrderAccounts(mfiAccount: MarginfiAccount) {
   const zoMargin = await mfiAccount.zo.getZoMargin();
 
-  const oo = await zoMargin.getOpenOrdersInfoBySymbol("SOL-PERP");
+  const oo = await zoMargin.getOpenOrdersInfoBySymbol(ZO_MARKET);
   if (!oo) {
-    await mfiAccount.zo.createPerpOpenOrders("SOL-PERP");
+    await mfiAccount.zo.createPerpOpenOrders(ZO_MARKET);
   }
 }
 
@@ -71,7 +80,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   // Get Mango market information.
   const mangoMarketConfig = await getMarketByBaseSymbolAndKind(
     mfiAccount.mango.config.groupConfig,
-    "SOL",
+    MANGO_MARKET,
     "perp"
   );
 
@@ -86,7 +95,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   // Get Zo market information.
   const zoState = await mfiAccount.zo.getZoState();
   const zoMargin = await mfiAccount.zo.getZoMargin(zoState);
-  const zoMarket = await zoState.getMarketBySymbol("SOL-PERP");
+  const zoMarket = await zoState.getMarketBySymbol(ZO_MARKET);
 
   const mangoFundingRate = new Decimal(
     mangoMarket.getCurrentFundingRate(
@@ -98,7 +107,7 @@ async function trade(mfiAccount: MarginfiAccount) {
     )
   );
 
-  const zoFundingInfo = await zoState.getFundingInfo("SOL-PERP");
+  const zoFundingInfo = await zoState.getFundingInfo(ZO_MARKET);
 
   if (!zoFundingInfo.data) {
     console.log("Can't get Zo funding info");
@@ -156,7 +165,7 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   console.log(
     "%s position structure:\n\tMango: %s @ %s\n\tZo: %s @ %s",
-    "SOL-PERP",
+    ZO_MARKET,
     (mangoDirection == Side.Bid
       ? mangoPositionSize
       : mangoPositionSize.neg()
@@ -173,14 +182,14 @@ async function trade(mfiAccount: MarginfiAccount) {
     mangoAccount.perpAccounts[mangoMarketConfig.marketIndex].getBasePositionUi(
       mangoMarket
     );
-  const currentZoPositionInfo = zoMargin.position("SOL-PERP");
+  const currentZoPositionInfo = zoMargin.position(ZO_MARKET);
   const currentZoPosition = currentZoPositionInfo.isLong
     ? currentZoPositionInfo.coins.decimal
     : currentZoPositionInfo.coins.decimal.neg();
 
   console.log(
     "Current positions on %s: Mango: %s, Zo: %s",
-    "SOL-PERP",
+    ZO_MARKET,
     currentMangoPosition,
     currentZoPosition
   );
@@ -206,7 +215,7 @@ async function trade(mfiAccount: MarginfiAccount) {
       mangoDirection == Side.Bid ? "LONG" : "SHORT",
       mangoDelta.toDecimalPlaces(4),
       mangoDelta.mul(mangoPrice).toDecimalPlaces(4),
-      "SOL-PERP",
+      ZO_MARKET,
       mangoPrice
     );
 
@@ -227,12 +236,12 @@ async function trade(mfiAccount: MarginfiAccount) {
       zoDirection ? "LONG" : "SHORT",
       zoDelta.toDecimalPlaces(4),
       zoDelta.mul(zoPrice).toDecimalPlaces(4),
-      "SOL-PERP",
+      ZO_MARKET,
       zoPrice
     );
 
     const ixw = await mfiAccount.zo.makePlacePerpOrderIx({
-      symbol: "SOL-PERP",
+      symbol: ZO_MARKET,
       isLong: zoDirection,
       price: zoPrice,
       size: zoDelta.abs().toNumber(),
@@ -242,7 +251,7 @@ async function trade(mfiAccount: MarginfiAccount) {
     ixs.push(...ixw.instructions);
   }
 
-  if (ixs.length > 0) {
+  if (ixs.length > 0 && !DRY_RUN) {
     const tx = new Transaction().add(...ixs);
     const sig = await processTransaction(provider, tx, []);
     console.log("Sig %s", sig);
