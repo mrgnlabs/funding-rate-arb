@@ -1,0 +1,13 @@
+{
+  "name": "funding-rate-arb",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/mrgnlabs/funding-rate-arb.git",
+  "author": "Jakob Povšič <jakob.povsic@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@blockworks-foundation/mango-client": "^3.6.5",
+    "@mrgnlabs/marginfi-client": "^0.3.0",
+    "@solana/web3.js": "^1.44.3"
+  }
+}
