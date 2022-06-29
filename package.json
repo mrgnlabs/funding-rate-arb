@@ -5,9 +5,14 @@
   "repository": "https://github.com/mrgnlabs/funding-rate-arb.git",
   "author": "Jakob Povšič <jakob.povsic@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "setup": "ts-node src/setup.ts",
+    "start": "ts-node src/run.ts"
+  },
   "dependencies": {
     "@blockworks-foundation/mango-client": "^3.6.5",
-    "@mrgnlabs/marginfi-client": "^0.3.0",
-    "@solana/web3.js": "^1.44.3"
+    "@mrgnlabs/marginfi-client": "link:../marginfi/sdk/ts/packages/marginfi-client",
+    "@solana/web3.js": "^1.44.3",
+    "ts-node": "^10.8.1"
   }
 }
