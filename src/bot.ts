@@ -19,7 +19,7 @@ const DUST_THRESHOLD = 0.1;
 
 // POSITION_SIZE_USD defines the max position size that the bot will take,
 // per UTP per loop.
-const POSITION_SIZE_USD = Number.parseInt(process.env.POSITION_SIZE || "10");
+export const POSITION_SIZE_USD = Number.parseInt(process.env.POSITION_SIZE || "10");
 
 // INTERVAL defines the interval the bot observes and takes action at.
 const INTERVAL = Number.parseInt(process.env.INTERVAL || "60000");
@@ -27,13 +27,13 @@ const INTERVAL = Number.parseInt(process.env.INTERVAL || "60000");
 const DRY_RUN = process.env.DRY_RUN === "true";
 
 const MANGO_MARKET = process.env.ASSET_KEY!;
-const MARKET = `${MANGO_MARKET}-PERP`;
+export const ZO_MARKET = `${MANGO_MARKET}-PERP`;
 
-async function main() {
+export async function run() {
   // Construct the marginfi client from .env file.
   console.log(
     "Starting arb bot for %s with account %s\nInterval %ss, max position size: $%s",
-    MARKET,
+    ZO_MARKET,
     process.env.MARGINFI_ACCOUNT,
     INTERVAL / 1000,
     POSITION_SIZE_USD
@@ -46,9 +46,6 @@ async function main() {
   const mfiAccount = await mfiClient.getMarginfiAccount(
     new PublicKey(process.env.MARGINFI_ACCOUNT!)
   );
-
-  // Set up Zo.
-  await checkZoOpenOrderAccounts(mfiAccount);
 
   let loop = async () => {
     try {
@@ -63,20 +60,6 @@ async function main() {
   };
 
   loop();
-}
-
-// ================================
-// Helper functions 👇
-// ================================
-
-// Creates a Zo open orders account so that we're prepared to use Zo.
-async function checkZoOpenOrderAccounts(mfiAccount: MarginfiAccount) {
-  const zoMargin = await mfiAccount.zo.getZoMargin();
-
-  const oo = await zoMargin.getOpenOrdersInfoBySymbol(MARKET);
-  if (!oo) {
-    await mfiAccount.zo.createPerpOpenOrders(MARKET);
-  }
 }
 
 async function trade(mfiAccount: MarginfiAccount) {
@@ -103,7 +86,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   // Get Zo market information.
   const zoState = await mfiAccount.zo.getZoState();
   const zoMargin = await mfiAccount.zo.getZoMargin(zoState);
-  const zoMarket = await zoState.getMarketBySymbol(MARKET);
+  const zoMarket = await zoState.getMarketBySymbol(ZO_MARKET);
 
   const mangoFundingRate = new Decimal(
     mangoMarket.getCurrentFundingRate(
@@ -115,7 +98,7 @@ async function trade(mfiAccount: MarginfiAccount) {
     )
   );
 
-  const zoFundingInfo = await zoState.getFundingInfo(MARKET);
+  const zoFundingInfo = await zoState.getFundingInfo(ZO_MARKET);
 
   if (!zoFundingInfo.data) {
     console.log("Can't get 01 funding info");
@@ -195,14 +178,14 @@ async function trade(mfiAccount: MarginfiAccount) {
     mangoAccount.perpAccounts[mangoMarketConfig.marketIndex].getBasePositionUi(
       mangoMarket
     );
-  const currentZoPositionInfo = zoMargin.position(MARKET);
+  const currentZoPositionInfo = zoMargin.position(ZO_MARKET);
   const currentZoPosition = currentZoPositionInfo.isLong
     ? currentZoPositionInfo.coins.decimal
     : currentZoPositionInfo.coins.decimal.neg();
 
   console.log(
     "Current positions on %s: Mango: %s, 01: %s",
-    MARKET,
+    ZO_MARKET,
     currentMangoPosition,
     currentZoPosition
   );
@@ -232,7 +215,7 @@ async function trade(mfiAccount: MarginfiAccount) {
       deltaLong ? "LONG" : "SHORT",
       mangoDelta.toDecimalPlaces(4),
       mangoDelta.abs().mul(price).toDecimalPlaces(4),
-      MARKET,
+      ZO_MARKET,
       price
     );
 
@@ -256,12 +239,12 @@ async function trade(mfiAccount: MarginfiAccount) {
       deltaLong ? "LONG" : "SHORT",
       zoDelta.toDecimalPlaces(4),
       zoDelta.abs().mul(price).toDecimalPlaces(4),
-      MARKET,
+      ZO_MARKET,
       price
     );
 
     const ixw = await mfiAccount.zo.makePlacePerpOrderIx({
-      symbol: MARKET,
+      symbol: ZO_MARKET,
       isLong: deltaLong,
       price: price,
       size: zoDelta.abs().toNumber(),
@@ -273,9 +256,11 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   if (ixs.length > 0 && !DRY_RUN) {
     const tx = new Transaction().add(...ixs);
-    const sig = await processTransaction(provider, tx, []);
-    console.log("Sig %s", sig);
+    try {
+      const sig = await processTransaction(provider, tx, []);
+      console.log("Sig %s", sig);
+    } catch (err: any) {
+      console.log("Position adjustment failed");
+    }
   }
 }
-
-main();
