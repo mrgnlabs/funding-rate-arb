@@ -19,19 +19,25 @@ const DUST_THRESHOLD = 0.1;
 
 // POSITION_SIZE_USD defines the max position size that the bot will take,
 // per UTP per loop.
-const POSITION_SIZE_USD = 10;
+const POSITION_SIZE_USD = Number.parseInt(process.env.POSITION_SIZE || "10");
 
 // INTERVAL defines the interval the bot observes and takes action at.
-const INTERVAL = 30 * 1000;
+const INTERVAL = Number.parseInt(process.env.INTERVAL || "60000");
 
 const DRY_RUN = process.env.DRY_RUN === "true";
 
-const MANGO_MARKET = "SOL";
-const ZO_MARKET = `${MANGO_MARKET}-PERP`;
+const MANGO_MARKET = process.env.ASSET_KEY!;
+const MARKET = `${MANGO_MARKET}-PERP`;
 
 async function main() {
   // Construct the marginfi client from .env file.
-  console.log("Starting arb bot for %s", ZO_MARKET);
+  console.log(
+    "Starting arb bot for %s with account %s\nInterval %ss, max position size: $%s",
+    MARKET,
+    process.env.MARGINFI_ACCOUNT,
+    INTERVAL / 1000,
+    POSITION_SIZE_USD
+  );
   if (DRY_RUN) {
     console.log("DRY RUN Enabled");
   }
@@ -67,15 +73,15 @@ async function main() {
 async function checkZoOpenOrderAccounts(mfiAccount: MarginfiAccount) {
   const zoMargin = await mfiAccount.zo.getZoMargin();
 
-  const oo = await zoMargin.getOpenOrdersInfoBySymbol(ZO_MARKET);
+  const oo = await zoMargin.getOpenOrdersInfoBySymbol(MARKET);
   if (!oo) {
-    await mfiAccount.zo.createPerpOpenOrders(ZO_MARKET);
+    await mfiAccount.zo.createPerpOpenOrders(MARKET);
   }
 }
 
 async function trade(mfiAccount: MarginfiAccount) {
-    console.log("----------------------------------------------------");
-    console.log("%s", new Date().toISOString());
+  console.log("----------------------------------------------------");
+  console.log("%s", new Date().toISOString());
   const connection = mfiAccount.client.program.provider.connection;
   const provider = mfiAccount.client.program.provider;
 
@@ -97,7 +103,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   // Get Zo market information.
   const zoState = await mfiAccount.zo.getZoState();
   const zoMargin = await mfiAccount.zo.getZoMargin(zoState);
-  const zoMarket = await zoState.getMarketBySymbol(ZO_MARKET);
+  const zoMarket = await zoState.getMarketBySymbol(MARKET);
 
   const mangoFundingRate = new Decimal(
     mangoMarket.getCurrentFundingRate(
@@ -109,7 +115,7 @@ async function trade(mfiAccount: MarginfiAccount) {
     )
   );
 
-  const zoFundingInfo = await zoState.getFundingInfo(ZO_MARKET);
+  const zoFundingInfo = await zoState.getFundingInfo(MARKET);
 
   if (!zoFundingInfo.data) {
     console.log("Can't get 01 funding info");
@@ -127,13 +133,18 @@ async function trade(mfiAccount: MarginfiAccount) {
   const delta = mangoFundingRate.sub(zoFundingRate).abs();
 
   console.log(
-      "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APY %s%)",
+    "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APY %s%)",
     mangoFundingRate.mul(new Decimal(100)).toPrecision(4),
     zoFundingRate.mul(new Decimal(100)).toPrecision(4),
     mangoDominant,
     delta.mul(new Decimal(100)).toPrecision(4),
     delta.mul(new Decimal(POSITION_SIZE_USD)).toDecimalPlaces(6),
-    delta.add(new Decimal(1)).pow(new Decimal(8760)).sub(new Decimal(1)).mul(new Decimal(100)).toDecimalPlaces(3)
+    delta
+      .add(new Decimal(1))
+      .pow(new Decimal(8760))
+      .sub(new Decimal(1))
+      .mul(new Decimal(100))
+      .toDecimalPlaces(3)
   );
 
   let mangoDirection: Side;
@@ -184,14 +195,14 @@ async function trade(mfiAccount: MarginfiAccount) {
     mangoAccount.perpAccounts[mangoMarketConfig.marketIndex].getBasePositionUi(
       mangoMarket
     );
-  const currentZoPositionInfo = zoMargin.position(ZO_MARKET);
+  const currentZoPositionInfo = zoMargin.position(MARKET);
   const currentZoPosition = currentZoPositionInfo.isLong
     ? currentZoPositionInfo.coins.decimal
     : currentZoPositionInfo.coins.decimal.neg();
 
   console.log(
     "Current positions on %s: Mango: %s, 01: %s",
-    ZO_MARKET,
+    MARKET,
     currentMangoPosition,
     currentZoPosition
   );
@@ -211,21 +222,25 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   const ixs: TransactionInstruction[] = [];
 
-  if (mangoDelta.gt(new Decimal(DUST_THRESHOLD))) {
+  if (mangoDelta.abs().gt(new Decimal(DUST_THRESHOLD))) {
+    const deltaLong = mangoDelta.isPositive();
+    const deltaDirection = deltaLong ? Side.Bid : Side.Ask;
+    const price = deltaLong ? mangoAskPrice : mangoBidPrice;
+
     console.log(
       "Opening %s %s ($%s) %s on Mango @ %s",
-      mangoDirection == Side.Bid ? "LONG" : "SHORT",
+      deltaLong ? "LONG" : "SHORT",
       mangoDelta.toDecimalPlaces(4),
-      mangoDelta.mul(mangoPrice).toDecimalPlaces(4),
-      ZO_MARKET,
-      mangoPrice
+      mangoDelta.abs().mul(price).toDecimalPlaces(4),
+      MARKET,
+      price
     );
 
     const ixw = await mfiAccount.mango.makePlacePerpOrderIx(
       mangoMarket,
-      mangoDirection,
-      mangoPrice,
-      mangoDelta.toNumber(),
+      deltaDirection,
+      price,
+      mangoDelta.abs().toNumber(),
       { orderType: PerpOrderType.Market }
     );
 
@@ -233,19 +248,22 @@ async function trade(mfiAccount: MarginfiAccount) {
   }
 
   if (zoDelta.abs().gt(new Decimal(DUST_THRESHOLD))) {
+    const deltaLong = zoDelta.isPositive();
+    const price = deltaLong ? zoAskPrice : zoBidPrice;
+
     console.log(
       "Opening %s %s ($%s) %s on 01 @ %s",
-      zoDirection ? "LONG" : "SHORT",
+      deltaLong ? "LONG" : "SHORT",
       zoDelta.toDecimalPlaces(4),
-      zoDelta.mul(zoPrice).toDecimalPlaces(4),
-      ZO_MARKET,
-      zoPrice
+      zoDelta.abs().mul(price).toDecimalPlaces(4),
+      MARKET,
+      price
     );
 
     const ixw = await mfiAccount.zo.makePlacePerpOrderIx({
-      symbol: ZO_MARKET,
-      isLong: zoDirection,
-      price: zoPrice,
+      symbol: MARKET,
+      isLong: deltaLong,
+      price: price,
       size: zoDelta.abs().toNumber(),
       orderType: OrderType.FillOrKill,
     });
