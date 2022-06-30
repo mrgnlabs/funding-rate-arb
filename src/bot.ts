@@ -19,7 +19,7 @@ const DUST_THRESHOLD = 0.1;
 
 // POSITION_SIZE_USD defines the max position size that the bot will take,
 // per UTP per loop.
-const POSITION_SIZE_USD = 10;
+export const POSITION_SIZE_USD = 10;
 
 // INTERVAL defines the interval the bot observes and takes action at.
 const INTERVAL = 30 * 1000;
@@ -27,9 +27,9 @@ const INTERVAL = 30 * 1000;
 const DRY_RUN = process.env.DRY_RUN === "true";
 
 const MANGO_MARKET = "SOL";
-const ZO_MARKET = `${MANGO_MARKET}-PERP`;
+export const ZO_MARKET = `${MANGO_MARKET}-PERP`;
 
-async function main() {
+export async function run() {
   // Construct the marginfi client from .env file.
   console.log("Starting arb bot for %s", ZO_MARKET);
   if (DRY_RUN) {
@@ -40,9 +40,6 @@ async function main() {
   const mfiAccount = await mfiClient.getMarginfiAccount(
     new PublicKey(process.env.MARGINFI_ACCOUNT!)
   );
-
-  // Set up Zo.
-  await checkZoOpenOrderAccounts(mfiAccount);
 
   let loop = async () => {
     try {
@@ -59,23 +56,9 @@ async function main() {
   loop();
 }
 
-// ================================
-// Helper functions 👇
-// ================================
-
-// Creates a Zo open orders account so that we're prepared to use Zo.
-async function checkZoOpenOrderAccounts(mfiAccount: MarginfiAccount) {
-  const zoMargin = await mfiAccount.zo.getZoMargin();
-
-  const oo = await zoMargin.getOpenOrdersInfoBySymbol(ZO_MARKET);
-  if (!oo) {
-    await mfiAccount.zo.createPerpOpenOrders(ZO_MARKET);
-  }
-}
-
 async function trade(mfiAccount: MarginfiAccount) {
-    console.log("----------------------------------------------------");
-    console.log("%s", new Date().toISOString());
+  console.log("----------------------------------------------------");
+  console.log("%s", new Date().toISOString());
   const connection = mfiAccount.client.program.provider.connection;
   const provider = mfiAccount.client.program.provider;
 
@@ -127,7 +110,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   const delta = mangoFundingRate.sub(zoFundingRate).abs();
 
   console.log(
-      "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APY %s%)",
+    "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APY %s%)",
     mangoFundingRate.mul(new Decimal(100)).toPrecision(4),
     zoFundingRate.mul(new Decimal(100)).toPrecision(4),
     mangoDominant,
@@ -255,9 +238,11 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   if (ixs.length > 0 && !DRY_RUN) {
     const tx = new Transaction().add(...ixs);
-    const sig = await processTransaction(provider, tx, []);
-    console.log("Sig %s", sig);
+    try {
+      const sig = await processTransaction(provider, tx, []);
+      console.log("Sig %s", sig);
+    } catch (err: any) {
+      console.log("Position adjustment failed");
+    }
   }
 }
-
-main();
