@@ -1,4 +1,4 @@
-# Marginfi MangoxO1 Funding Rate Arb bot
+# Marginfi Mangox01 Funding Rate Arb bot
 
 ## Setup
 
