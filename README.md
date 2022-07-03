@@ -3,7 +3,7 @@
 ## Setup
 
 ```
-cp .env.example .env
+cp .env.example.mainnet .env
 ```
 
 Set the `WALLET=` the path of your solana wallet.
@@ -21,3 +21,8 @@ Start the bot
 ```
 yarn start
 ```
+
+# DISCLAIMER
+**Not financial advice**.
+
+This bot is written for educational purposes only.

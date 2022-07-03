@@ -19,18 +19,20 @@ import { POSITION_SIZE_USD, ZO_MARKET } from "./bot";
 
   // Get marginfi account from .env config.
   const mfiClient = await getClientFromEnv();
-  const mfiAccount = await mfiClient.getMarginfiAccount(
-    new PublicKey(process.env.MARGINFI_ACCOUNT!)
-  );
-
+  const mfiAccount = await mfiClient.createMarginfiAccount()
+  console.log("Account address %s", mfiAccount.publicKey);
+  
   await mfiAccount.deposit(uiToNative(POSITION_SIZE_USD))
 
   // Setup UTPs.
   await setupZo(mfiAccount);
   await setupMango(mfiAccount);
+
+  console.log("Done. Add MARGINFI_ACCOUNT=%s to .env", mfiAccount.publicKey);
 })()
 
 async function setupZo(mfiAccount: MarginfiAccount) {
+  console.log("Setting up 01");
   const zo = mfiAccount.zo
   if (!zo.isActive) {
     await zo.activate();
@@ -46,6 +48,7 @@ async function setupZo(mfiAccount: MarginfiAccount) {
 }
 
 async function setupMango(mfiAccount: MarginfiAccount) {
+  console.log("Setting up Mango");
   const mango = mfiAccount.mango
 
   if (!mango.isActive) {

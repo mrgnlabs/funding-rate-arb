@@ -19,12 +19,14 @@ const DUST_THRESHOLD = 0.1;
 
 // POSITION_SIZE_USD defines the max position size that the bot will take,
 // per UTP per loop.
-export const POSITION_SIZE_USD = Number.parseInt(process.env.POSITION_SIZE || "10");
+export const POSITION_SIZE_USD = Number.parseInt(
+  process.env.POSITION_SIZE || "10"
+);
 
 // INTERVAL defines the interval the bot observes and takes action at.
 const INTERVAL = Number.parseInt(process.env.INTERVAL || "60000");
 
-const DRY_RUN = process.env.DRY_RUN === "true";
+const DRY_RUN = process.env.DRY_RUN == "true";
 
 const MANGO_MARKET = process.env.ASSET_KEY!;
 export const ZO_MARKET = `${MANGO_MARKET}-PERP`;
@@ -38,6 +40,7 @@ export async function run() {
     INTERVAL / 1000,
     POSITION_SIZE_USD
   );
+
   if (DRY_RUN) {
     console.log("DRY RUN Enabled");
   }
@@ -47,10 +50,16 @@ export async function run() {
     new PublicKey(process.env.MARGINFI_ACCOUNT!)
   );
 
+  const zoMargin = await mfiAccount.zo.getZoMargin();
+  const oo = await zoMargin.getOpenOrdersInfoBySymbol(ZO_MARKET);
+  if (!oo) {
+    await mfiAccount.zo.createPerpOpenOrders(ZO_MARKET);
+  }
+
   let loop = async () => {
     try {
       // Main action
-      trade(mfiAccount);
+      await trade(mfiAccount);
     } catch (e) {
       console.log("An error occurred:");
       console.error(e);
@@ -257,7 +266,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   if (ixs.length > 0 && !DRY_RUN) {
     const tx = new Transaction().add(...ixs);
     try {
-      const sig = await processTransaction(provider, tx, []);
+      const sig = await processTransaction(provider, tx, [], { skipPreflight: true });
       console.log("Sig %s", sig);
     } catch (err: any) {
       console.log("Position adjustment failed");
