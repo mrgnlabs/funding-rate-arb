@@ -266,7 +266,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   if (ixs.length > 0 && !DRY_RUN) {
     const tx = new Transaction().add(...ixs);
     try {
-      const sig = await processTransaction(provider, tx, [], { skipPreflight: true });
+      const sig = await processTransaction(provider, tx, []);
       console.log("Sig %s", sig);
     } catch (err: any) {
       console.log("Position adjustment failed");
