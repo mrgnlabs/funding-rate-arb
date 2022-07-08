@@ -5,10 +5,7 @@ import {
   MarginfiAccount,
   uiToNative,
 } from "@mrgnlabs/marginfi-client";
-import {
-  PublicKey,
-} from "@solana/web3.js";
-import { POSITION_SIZE_USD, ZO_MARKET } from "./bot";
+import { POSITION_SIZE_USD } from "./bot";
 
 /**
  * Sample setup for a brand new account
@@ -19,10 +16,11 @@ import { POSITION_SIZE_USD, ZO_MARKET } from "./bot";
 
   // Get marginfi account from .env config.
   const mfiClient = await getClientFromEnv();
-  const mfiAccount = await mfiClient.createMarginfiAccount()
+  const mfiAccount = await tryOrCry(mfiClient.createMarginfiAccount(), "Creating marginfi account");
+
   console.log("Account address %s", mfiAccount.publicKey);
   
-  await mfiAccount.deposit(uiToNative(POSITION_SIZE_USD))
+  await tryOrCry(mfiAccount.deposit(uiToNative(POSITION_SIZE_USD)), "Depositing into marginfi account");
 
   // Setup UTPs.
   await setupZo(mfiAccount);
@@ -34,26 +32,26 @@ import { POSITION_SIZE_USD, ZO_MARKET } from "./bot";
 async function setupZo(mfiAccount: MarginfiAccount) {
   console.log("Setting up 01");
   const zo = mfiAccount.zo
-  if (!zo.isActive) {
-    await zo.activate();
-  }
 
-  const zoMargin = await zo.getZoMargin();
-  const oo = await zoMargin.getOpenOrdersInfoBySymbol(ZO_MARKET);
-  if (!oo) {
-    await zo.createPerpOpenOrders(ZO_MARKET);
-  }
-
-  await zo.deposit(uiToNative(POSITION_SIZE_USD / 2, 6))
+  await tryOrCry(zo.activate(), "Activating 01 Protocol");
+  await tryOrCry(zo.deposit(uiToNative(POSITION_SIZE_USD / 2, 6)), "Depositing into 01 Protocol");
 }
 
 async function setupMango(mfiAccount: MarginfiAccount) {
   console.log("Setting up Mango");
   const mango = mfiAccount.mango
 
-  if (!mango.isActive) {
-    await mango.activate();
-  }
+  await tryOrCry(mango.activate(), "Activating Mango Protocol");
+  await tryOrCry(mango.deposit(uiToNative(POSITION_SIZE_USD / 2, 6)), "Depositing into Mango Protocol");
+}
 
-  await mango.deposit(uiToNative(POSITION_SIZE_USD / 2, 6))
+
+async function tryOrCry<G>(promise: Promise<G>, actionText: string): Promise<G> {
+  console.log("%s", actionText.toUpperCase());
+  try {
+    return await promise
+  } catch (e) {
+    console.log("%s FAILED", actionText.toUpperCase());
+    throw e
+  }
 }

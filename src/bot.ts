@@ -125,18 +125,13 @@ async function trade(mfiAccount: MarginfiAccount) {
   const delta = mangoFundingRate.sub(zoFundingRate).abs();
 
   console.log(
-    "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APY %s%)",
+    "Mango: %s%, 01: %s%, Mango dominant: %s, delta: %s% ($%s/h - APR %s%)",
     mangoFundingRate.mul(new Decimal(100)).toPrecision(4),
     zoFundingRate.mul(new Decimal(100)).toPrecision(4),
     mangoDominant,
     delta.mul(new Decimal(100)).toPrecision(4),
     delta.mul(new Decimal(POSITION_SIZE_USD)).toDecimalPlaces(6),
-    delta
-      .add(new Decimal(1))
-      .pow(new Decimal(8760))
-      .sub(new Decimal(1))
-      .mul(new Decimal(100))
-      .toDecimalPlaces(3)
+    delta.mul(new Decimal(8760)).mul(new Decimal(100)).toPrecision(4)
   );
 
   let mangoDirection: Side;

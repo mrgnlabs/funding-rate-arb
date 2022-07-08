@@ -86,9 +86,19 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@mrgnlabs/marginfi-client@link:../marginfi/sdk/ts/packages/marginfi-client":
-  version "0.0.0"
-  uid ""
+"@mrgnlabs/marginfi-client@^0.5.2":
+  version "0.5.2"
+  resolved "https://registry.yarnpkg.com/@mrgnlabs/marginfi-client/-/marginfi-client-0.5.2.tgz#2da56a88490cf98b44d564396c06cc51ac35af35"
+  integrity sha512-zTfBe18gcUE3MPcYwLRb+FFBF5D6x4Ec0AvPEU2lpqlBOS8MwmfBUiCKd1t1QtjJL/2+zBk6Qi/NkLbDC7KRXA==
+  dependencies:
+    "@blockworks-foundation/mango-client" "^3.3.28"
+    "@drift-labs/sdk" "^0.1.36-master.2"
+    "@mrgnlabs/marginfi-wasm-tools" "^0.1.1"
+    "@project-serum/anchor" "^0.23.0"
+    "@solana/web3.js" "^1.37.0"
+    "@zero_one/client" "^0.8.7"
+    bigint-buffer "^1.1.5"
+    debug "^4.3.4"
 
 "@mrgnlabs/marginfi-wasm-tools@^0.1.1":
   version "0.1.1"

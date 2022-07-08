@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@blockworks-foundation/mango-client": "^3.6.5",
-    "@mrgnlabs/marginfi-client": "^0.5.1",
+    "@mrgnlabs/marginfi-client": "^0.5.2",
     "@solana/web3.js": "^1.44.3",
     "ts-node": "^10.8.1"
   }
