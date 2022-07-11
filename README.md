@@ -21,6 +21,8 @@ Setup node dependencies
 yarn
 ```
 
+You can follow either the **Setup Script** or the **Cli Setup**
+
 ### Setup Script
 
 Create your marginfi account, fund it, and activate the trading protocols
