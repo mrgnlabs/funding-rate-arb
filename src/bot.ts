@@ -2,12 +2,13 @@ require("dotenv").config();
 
 import { getMarketByBaseSymbolAndKind } from "@blockworks-foundation/mango-client";
 import {
-  getClientFromEnv,
   MarginfiAccount,
+  MarginfiClient,
   processTransaction,
+  MangoOrderSide,
+  MangoPerpOrderType,
+  ZoPerpOrderType,
 } from "@mrgnlabs/marginfi-client";
-import { PerpOrderType, Side } from "@mrgnlabs/marginfi-client/dist/utp/mango";
-import { OrderType } from "@mrgnlabs/marginfi-client/dist/utp/zo/types";
 import {
   PublicKey,
   Transaction,
@@ -44,7 +45,7 @@ export async function run() {
   if (DRY_RUN) {
     console.log("DRY RUN Enabled");
   }
-  const mfiClient = await getClientFromEnv();
+  const mfiClient = await MarginfiClient.fromEnv();
   // Get marginfi account from .env config.
   const mfiAccount = await mfiClient.getMarginfiAccount(
     new PublicKey(process.env.MARGINFI_ACCOUNT!)
@@ -134,15 +135,15 @@ async function trade(mfiAccount: MarginfiAccount) {
     delta.mul(new Decimal(8760)).mul(new Decimal(100)).toPrecision(4)
   );
 
-  let mangoDirection: Side;
+  let mangoDirection: MangoOrderSide;
   let zoDirection: boolean;
 
   if (mangoDominant) {
-    mangoDirection = mangoPositive ? Side.Ask : Side.Bid;
+    mangoDirection = mangoPositive ? MangoOrderSide.Ask : MangoOrderSide.Bid;
     zoDirection = mangoPositive;
   } else {
     zoDirection = !zoPositive;
-    mangoDirection = zoPositive ? Side.Bid : Side.Ask;
+    mangoDirection = zoPositive ? MangoOrderSide.Bid : MangoOrderSide.Ask;
   }
 
   let mangoPrice;
@@ -153,7 +154,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   const zoAskPrice = (await zoMarket.loadAsks(connection)).getL2(1)[0][0];
   const zoBidPrice = (await zoMarket.loadBids(connection)).getL2(1)[0][0];
 
-  if (mangoDirection == Side.Ask) {
+  if (mangoDirection == MangoOrderSide.Ask) {
     mangoPrice = mangoBidPrice;
     zoPrice = zoAskPrice;
   } else {
@@ -166,7 +167,7 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   console.log(
     "Position: Mango: %s @ %s 01: %s @ %s",
-    (mangoDirection == Side.Bid
+    (mangoDirection == MangoOrderSide.Bid
       ? mangoPositionSize
       : mangoPositionSize.neg()
     ).toDecimalPlaces(4),
@@ -195,7 +196,7 @@ async function trade(mfiAccount: MarginfiAccount) {
   );
 
   const mangoDelta = (
-    mangoDirection === Side.Bid ? mangoPositionSize : mangoPositionSize.neg()
+    mangoDirection === MangoOrderSide.Bid ? mangoPositionSize : mangoPositionSize.neg()
   ).sub(currentMangoPosition);
   const zoDelta = (zoDirection ? zoPositionSize : zoPositionSize.neg()).sub(
     currentZoPosition
@@ -211,7 +212,7 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   if (mangoDelta.abs().gt(new Decimal(DUST_THRESHOLD))) {
     const deltaLong = mangoDelta.isPositive();
-    const deltaDirection = deltaLong ? Side.Bid : Side.Ask;
+    const deltaDirection = deltaLong ? MangoOrderSide.Bid : MangoOrderSide.Ask;
     const price = deltaLong ? mangoAskPrice : mangoBidPrice;
 
     console.log(
@@ -228,7 +229,7 @@ async function trade(mfiAccount: MarginfiAccount) {
       deltaDirection,
       price,
       mangoDelta.abs().toNumber(),
-      { orderType: PerpOrderType.Market }
+      { orderType: MangoPerpOrderType.Market }
     );
 
     ixs.push(...ixw.instructions);
@@ -252,7 +253,7 @@ async function trade(mfiAccount: MarginfiAccount) {
       isLong: deltaLong,
       price: price,
       size: zoDelta.abs().toNumber(),
-      orderType: OrderType.FillOrKill,
+      orderType: ZoPerpOrderType.Limit,
     });
 
     ixs.push(...ixw.instructions);
