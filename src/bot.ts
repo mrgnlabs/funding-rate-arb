@@ -10,6 +10,7 @@ import {
   ZoPerpOrderType,
 } from "@mrgnlabs/marginfi-client";
 import {
+  ComputeBudgetProgram,
   PublicKey,
   Transaction,
   TransactionInstruction,
@@ -196,7 +197,9 @@ async function trade(mfiAccount: MarginfiAccount) {
   );
 
   const mangoDelta = (
-    mangoDirection === MangoOrderSide.Bid ? mangoPositionSize : mangoPositionSize.neg()
+    mangoDirection === MangoOrderSide.Bid
+      ? mangoPositionSize
+      : mangoPositionSize.neg()
   ).sub(currentMangoPosition);
   const zoDelta = (zoDirection ? zoPositionSize : zoPositionSize.neg()).sub(
     currentZoPosition
@@ -260,7 +263,10 @@ async function trade(mfiAccount: MarginfiAccount) {
   }
 
   if (ixs.length > 0 && !DRY_RUN) {
-    const tx = new Transaction().add(...ixs);
+    const tx = new Transaction().add(
+      ComputeBudgetProgram.requestUnits({ units: 600_000, additionalFee: 0 }),
+      ...ixs
+    );
     try {
       const sig = await processTransaction(provider, tx, []);
       console.log("Sig %s", sig);
