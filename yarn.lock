@@ -74,9 +74,9 @@
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
 "@mrgnlabs/marginfi-client@^0.6.1":
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/@mrgnlabs/marginfi-client/-/marginfi-client-0.6.1.tgz#9ee24b59417709df58500d410ee2378e89c0f8c3"
-  integrity sha512-VQZGoPogQl3ml9P0bNtjD14CaOf1BdoNnFWM/irQCH73Svb25JEEj34o7iv3W0rCiOt48xKhLoaa3tpfzs/xbw==
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/@mrgnlabs/marginfi-client/-/marginfi-client-0.6.2.tgz#82ef147420dbae3a51d4e29a29520440a6f778b3"
+  integrity sha512-XgPuPU/gpl4UK9ExdR0e/I/vVYRDiJCRpGFAc1rcZm+wyGkhXBnGchEsKR87fhk53EoMRyE1TwoncmjQtvk1WA==
   dependencies:
     "@blockworks-foundation/mango-client" "^3.6.7"
     "@project-serum/anchor" "^0.23.0"
