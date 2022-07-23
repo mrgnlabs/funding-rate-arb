@@ -73,10 +73,10 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@mrgnlabs/marginfi-client@^0.6.1":
-  version "0.6.2"
-  resolved "https://registry.yarnpkg.com/@mrgnlabs/marginfi-client/-/marginfi-client-0.6.2.tgz#82ef147420dbae3a51d4e29a29520440a6f778b3"
-  integrity sha512-XgPuPU/gpl4UK9ExdR0e/I/vVYRDiJCRpGFAc1rcZm+wyGkhXBnGchEsKR87fhk53EoMRyE1TwoncmjQtvk1WA==
+"@mrgnlabs/marginfi-client@^0.7.2-alpha":
+  version "0.7.2-alpha"
+  resolved "https://registry.yarnpkg.com/@mrgnlabs/marginfi-client/-/marginfi-client-0.7.2-alpha.tgz#82c30d25ec1dcb4b88830a888ec6e24539173999"
+  integrity sha512-Z55La8AhcW3gOr0ISZ4LY/3TXmKAPXRPK9s8i9r+I16oC8NoPdqUQIP5tvTj0GU/nowzaLRaLSZFRwnE+5wfKQ==
   dependencies:
     "@blockworks-foundation/mango-client" "^3.6.7"
     "@project-serum/anchor" "^0.23.0"
@@ -85,6 +85,7 @@
     bigint-buffer "^1.1.5"
     bignumber.js "^9.0.2"
     debug "^4.3.4"
+    decimal.js "^10.3.1"
 
 "@project-serum/anchor@^0.11.1":
   version "0.11.1"
