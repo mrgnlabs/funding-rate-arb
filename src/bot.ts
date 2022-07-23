@@ -155,6 +155,9 @@ async function trade(mfiAccount: MarginfiAccount) {
   const zoAskPrice = (await zoMarket.loadAsks(connection)).getL2(1)[0][0];
   const zoBidPrice = (await zoMarket.loadBids(connection)).getL2(1)[0][0];
 
+  console.log("Mango ask: %s, bid: %s", mangoAskPrice, mangoBidPrice);
+  console.log("01 ask: %s, bid: %s", zoAskPrice, zoBidPrice);
+
   if (mangoDirection == MangoOrderSide.Ask) {
     mangoPrice = mangoBidPrice;
     zoPrice = zoAskPrice;
@@ -264,7 +267,7 @@ async function trade(mfiAccount: MarginfiAccount) {
 
   if (ixs.length > 0 && !DRY_RUN) {
     const tx = new Transaction().add(
-      ComputeBudgetProgram.requestUnits({ units: 600_000, additionalFee: 0 }),
+      ComputeBudgetProgram.requestUnits({ units: 1_000_000, additionalFee: 0 }),
       ...ixs
     );
     try {
