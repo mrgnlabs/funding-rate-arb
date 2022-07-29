@@ -257,7 +257,7 @@ async function trade(mfiAccount: MarginfiAccount) {
     const ixw = await mfiAccount.zo.makePlacePerpOrderIx({
       symbol: ZO_MARKET,
       isLong: deltaLong,
-      price: deltaLong ? 1_000_000 : 0,
+      price: deltaLong ? 1_000_000 : 1,
       size: zoDelta.abs().toNumber(),
       orderType: ZoPerpOrderType.FillOrKill,
     });
